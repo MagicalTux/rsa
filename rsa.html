@@ -71,6 +71,13 @@
             return x1;
         }
 
+        function getRandomBigInt(bits) {
+            const byteCount = Math.ceil(bits / 8);
+            const randomBytes = new Uint8Array(byteCount);
+            window.crypto.getRandomValues(randomBytes);
+            return BigInt('0x' + Array.from(randomBytes).map(byte => byte.toString(16).padStart(2, '0')).join(''));
+        }
+
         function isProbablyPrime(num, k = 5) {
             num = BigInt(num);
             if (num <= 1n) return false;
@@ -85,7 +92,7 @@
             }
 
             witnessLoop: for (let i = 0; i < k; i++) {
-                const a = BigInt(2 + Math.floor(Math.random() * (Number(num - 4n))));
+                const a = getRandomBigInt(num.toString(2).length) % (num - 3n) + 2n;
                 let x = modExp(a, d, num);
                 if (x === 1n || x === num - 1n) continue;
 
@@ -117,9 +124,7 @@
         function generatePrime(bits) {
             let prime;
             do {
-                const byteCount = Math.ceil(bits / 8);
-                const randomBytes = crypto.getRandomValues(new Uint8Array(byteCount));
-                prime = BigInt('0x' + Array.from(randomBytes).map(byte => byte.toString(16).padStart(2, '0')).join(''));
+                prime = getRandomBigInt(bits);
             } while (!isProbablyPrime(prime) || prime < 7n);
             return prime;
         }
@@ -192,7 +197,7 @@
                 } else if (eOption === "custom") {
                     e = BigInt(document.getElementById("customE").value);
                     if (gcd(e, lambda_n) !== 1n) {
-                        alert("The custom e value must be coprime with λ(n).");
+                        alert("The custom e value must be coprime with λ(n). Please enter a different value.");
                         return;
                     }
                 }
