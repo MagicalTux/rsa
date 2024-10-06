@@ -169,16 +169,24 @@
                     return;
                 }
 
+                output.innerHTML += `Step 1: Choose two distinct prime numbers p and q.
+`;
                 output.innerHTML += `Prime p: ${p}
 `;
                 output.innerHTML += `Prime q: ${q}
 `;
 
                 const n = p * q;
+                output.innerHTML += `
+Step 2: Compute n = p * q.
+`;
                 output.innerHTML += `n = p * q = ${p} * ${q} = ${n}
 `;
 
                 const lambda_n = lcm(p - 1n, q - 1n);
+                output.innerHTML += `
+Step 3: Compute λ(n), which is the least common multiple (lcm) of (p-1) and (q-1).
+`;
                 output.innerHTML += `λ(n) = lcm(p-1, q-1) = ${lambda_n}
 `;
 
@@ -202,28 +210,47 @@
                     }
                 }
 
+                output.innerHTML += `
+Step 4: Choose an integer e such that 1 < e < λ(n) and gcd(e, λ(n)) = 1. This value e is the public exponent.
+`;
                 output.innerHTML += `e = ${e}
 `;
 
                 const d = modInverse(e, lambda_n);
+                output.innerHTML += `
+Step 5: Compute d, the modular multiplicative inverse of e modulo λ(n), so that (d * e) % λ(n) = 1. This value d is the private exponent.
+`;
                 output.innerHTML += `d = modInverse(e, λ(n)) = ${d}
 `;
 
                 output.innerHTML += `
-Public key: [e, n] = [${e}, ${n}]
+Step 6: The public key is composed of (e, n) and the private key is composed of (d, n).
+`;
+                output.innerHTML += `Public key: [e, n] = [${e}, ${n}]
 `;
                 output.innerHTML += `Private key: [d, n] = [${d}, ${n}]
 `;
 
                 const encrypted = modExp(message, e, n);
                 output.innerHTML += `
-Encrypting message ${message}:
+Step 7: Encrypt the message using the public key.
 `;
-                output.innerHTML += `Encrypted = (message^e) % n = ${encrypted}
+                output.innerHTML += `The message ${message} is encrypted as follows:
+`;
+                output.innerHTML += `Encrypted = (message^e) % n = (${message}^${e}) % ${n} = ${encrypted}
 `;
 
                 const decrypted = modExp(encrypted, d, n);
-                output.innerHTML += `Decrypted = (Encrypted^d) % n = ${decrypted}
+                output.innerHTML += `
+Step 8: Decrypt the encrypted message using the private key.
+`;
+                output.innerHTML += `The encrypted message ${encrypted} is decrypted as follows:
+`;
+                output.innerHTML += `Decrypted = (Encrypted^d) % n = (${encrypted}^${d}) % ${n} = ${decrypted}
+`;
+
+                output.innerHTML += `
+Step 9: The original message is successfully recovered as ${decrypted}.
 `;
             } catch (error) {
                 alert("Invalid input. Please enter valid integers for p, q, and message.");
