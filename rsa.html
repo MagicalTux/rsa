@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple RSA Demo</title>
+</head>
+<body>
+    <h2>Easy to understand RSA with small values!</h2>
+    <p>Choose the number of bits (up to 8192) or specify p and q manually to see the generated RSA keys and encryption/decryption process.</p>
+
+    <label for="bits">Bits (up to 8192):</label>
+    <input type="number" id="bits" min="1" max="8192" value="8">
+    <button onclick="generatePrimesAndCalculate()">Generate Primes</button>
+    <br>
+    <label for="p">Prime p:</label>
+    <input type="text" id="p">
+    <br>
+    <label for="q">Prime q:</label>
+    <input type="text" id="q">
+    <br>
+    <label for="e">Choose e:</label>
+    <input type="radio" name="eOption" value="smallest" checked> Smallest value
+    <input type="radio" name="eOption" value="0x10001"> 0x10001 (65537)
+    <input type="radio" name="eOption" value="custom">
+    <input type="number" id="customE" placeholder="Enter custom e">
+    <br>
+    <label for="message">Message to Encrypt:</label>
+    <input type="number" id="message" value="42">
+    <br>
+    <button onclick="calculateRSA()">Calculate</button>
+
+    <pre id="output"></pre>
+
+    <script>
+        function gcd(a, b) {
+            a = BigInt(a);
+            b = BigInt(b);
+            while (b !== 0n) {
+                [a, b] = [b, a % b];
+            }
+            return a;
+        }
+
+        function lcm(a, b) {
+            a = BigInt(a);
+            b = BigInt(b);
+            return (a * b) / gcd(a, b);
+        }
+
+        function modInverse(a, m) {
+            a = BigInt(a);
+            m = BigInt(m);
+            let m0 = m, t, q;
+            let x0 = 0n, x1 = 1n;
+
+            if (m === 1n) return 0n;
+
+            while (a > 1n) {
+                q = a / m;
+                t = m;
+                m = a % m;
+                a = t;
+                t = x0;
+                x0 = x1 - q * x0;
+                x1 = t;
+            }
+
+            if (x1 < 0n) x1 += m0;
+
+            return x1;
+        }
+
+        function isProbablyPrime(num, k = 5) {
+            num = BigInt(num);
+            if (num <= 1n) return false;
+            if (num === 2n || num === 3n) return true;
+            if (num % 2n === 0n) return false;
+
+            let d = num - 1n;
+            let r = 0n;
+            while (d % 2n === 0n) {
+                d /= 2n;
+                r += 1n;
+            }
+
+            witnessLoop: for (let i = 0; i < k; i++) {
+                const a = BigInt(2 + Math.floor(Math.random() * (Number(num - 4n))));
+                let x = modExp(a, d, num);
+                if (x === 1n || x === num - 1n) continue;
+
+                for (let j = 0; j < r - 1n; j++) {
+                    x = modExp(x, 2n, num);
+                    if (x === num - 1n) continue witnessLoop;
+                }
+
+                return false;
+            }
+            return true;
+        }
+
+        function modExp(base, exp, mod) {
+            base = BigInt(base);
+            exp = BigInt(exp);
+            mod = BigInt(mod);
+            let result = 1n;
+            while (exp > 0) {
+                if (exp % 2n === 1n) {
+                    result = (result * base) % mod;
+                }
+                base = (base * base) % mod;
+                exp /= 2n;
+            }
+            return result;
+        }
+
+        function generatePrime(bits) {
+            let prime;
+            do {
+                const byteCount = Math.ceil(bits / 8);
+                const randomBytes = crypto.getRandomValues(new Uint8Array(byteCount));
+                prime = BigInt('0x' + Array.from(randomBytes).map(byte => byte.toString(16).padStart(2, '0')).join(''));
+            } while (!isProbablyPrime(prime) || prime < 7n);
+            return prime;
+        }
+
+        function generatePrimesAndCalculate() {
+            generatePrimes();
+            calculateRSA();
+        }
+
+        function generatePrimes() {
+            let bits = parseInt(document.getElementById("bits").value);
+            let p = generatePrime(bits / 2);
+            let q;
+            do {
+                q = generatePrime(bits / 2);
+            } while (p === q);
+
+            document.getElementById("p").value = p;
+            document.getElementById("q").value = q;
+        }
+
+        function calculateRSA() {
+            const output = document.getElementById("output");
+            output.innerHTML = "";
+
+            let bits = parseInt(document.getElementById("bits").value);
+            let pInput = document.getElementById("p").value;
+            let qInput = document.getElementById("q").value;
+            let messageInput = document.getElementById("message").value;
+
+            try {
+                let p = BigInt(pInput);
+                let q = BigInt(qInput);
+                let message = BigInt(messageInput);
+
+                if (!isProbablyPrime(p)) {
+                    alert("p must be a prime number.");
+                    return;
+                }
+                if (!isProbablyPrime(q) || p === q) {
+                    alert("q must be a prime number and different from p.");
+                    return;
+                }
+
+                output.innerHTML += `Prime p: ${p}
+`;
+                output.innerHTML += `Prime q: ${q}
+`;
+
+                const n = p * q;
+                output.innerHTML += `n = p * q = ${p} * ${q} = ${n}
+`;
+
+                const lambda_n = lcm(p - 1n, q - 1n);
+                output.innerHTML += `λ(n) = lcm(p-1, q-1) = ${lambda_n}
+`;
+
+                let e;
+                const eOption = document.querySelector('input[name="eOption"]:checked').value;
+                if (eOption === "smallest") {
+                    const e_candidates = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n];
+                    for (let candidate of e_candidates) {
+                        if (gcd(candidate, lambda_n) === 1n) {
+                            e = candidate;
+                            break;
+                        }
+                    }
+                } else if (eOption === "0x10001") {
+                    e = 0x10001n;
+                } else if (eOption === "custom") {
+                    e = BigInt(document.getElementById("customE").value);
+                    if (gcd(e, lambda_n) !== 1n) {
+                        alert("The custom e value must be coprime with λ(n).");
+                        return;
+                    }
+                }
+
+                output.innerHTML += `e = ${e}
+`;
+
+                const d = modInverse(e, lambda_n);
+                output.innerHTML += `d = modInverse(e, λ(n)) = ${d}
+`;
+
+                output.innerHTML += `
+Public key: [e, n] = [${e}, ${n}]
+`;
+                output.innerHTML += `Private key: [d, n] = [${d}, ${n}]
+`;
+
+                const encrypted = modExp(message, e, n);
+                output.innerHTML += `
+Encrypting message ${message}:
+`;
+                output.innerHTML += `Encrypted = (message^e) % n = ${encrypted}
+`;
+
+                const decrypted = modExp(encrypted, d, n);
+                output.innerHTML += `Decrypted = (Encrypted^d) % n = ${decrypted}
+`;
+            } catch (error) {
+                alert("Invalid input. Please enter valid integers for p, q, and message.");
+            }
+        }
+    </script>
+</body>
+</html>
