@@ -36,7 +36,7 @@
     <p>Choose the number of bits (up to 8192) or specify p and q manually to see the generated RSA keys and encryption/decryption process.</p>
 
     <label for="bits">Bits (up to 8192):</label>
-    <input type="number" id="bits" min="1" max="8192" value="8" step="8">
+    <input type="number" id="bits" min="8" max="8192" value="8" step="2">
     <button onclick="generatePrimesAndCalculate()">Generate Primes</button>
     (larger values can be slow to generate)
     <br>
@@ -98,11 +98,24 @@
             return x1;
         }
 
-        function getRandomBigInt(bits) {
+	function getRandomBigInt(bits) {
             const byteCount = Math.ceil(bits / 8);
             const randomBytes = new Uint8Array(byteCount);
             window.crypto.getRandomValues(randomBytes);
-            return BigInt('0x' + Array.from(randomBytes).map(byte => byte.toString(16).padStart(2, '0')).join(''));
+
+            // Convert the random bytes to a BigInt
+            let randomBigInt = BigInt('0x' + Array.from(randomBytes).map(byte => byte.toString(16).padStart(2, '0')).join(''));
+
+            // Calculate the number of excess bits in the final byte
+            const excessBits = (byteCount * 8) - bits;
+
+            // Mask out the extra bits to ensure the result is within the requested bit length
+            if (excessBits > 0) {
+                const mask = (BigInt(1) << BigInt(bits)) - BigInt(1);
+                randomBigInt &= mask;
+            }
+
+            return randomBigInt;
         }
 
         function isProbablyPrime(num, k = 5) {
@@ -165,6 +178,7 @@
             let bits = parseInt(document.getElementById("bits").value);
             let p = generatePrime(bits / 2);
             let q;
+	    let giveUp = 8;
             do {
                 q = generatePrime(bits / 2);
             } while (p === q);
